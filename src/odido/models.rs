@@ -31,6 +31,8 @@ pub struct Bundle {
     pub zone_color: String,
     #[serde(rename = "Remaining")]
     pub remaining: Remaining,
+    #[serde(rename = "BuyingCode")]
+    pub buying_code: Option<String>,
 }
 
 #[derive(Deserialize)]

@@ -21,6 +21,7 @@
 | `ODIDO_BUYING_CODE` | - | Welke bundel wordt aangevraagd. | `A0DAY01` |
 | `MB_THRESHOLD` | - | Onder hoeveel MB een nieuwe bundel wordt aangevraagd. | `2000` |
 | `RUN_ONCE` | `--once`/`-o` | Draai het programma één keer i.p.v. in een oneindige loop. | `false` |
+| `DISCOVER_BUYING_CODE` | `--no-discover-buying-code` | Log alternatieve `BuyingCode`s (anders dan `ODIDO_BUYING_CODE`) die in de API-response voorbijkomen. | `true` |
 
 ### Check-interval
 

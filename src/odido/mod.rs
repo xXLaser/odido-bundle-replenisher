@@ -2,7 +2,7 @@ pub mod auth;
 mod models;
 
 use crate::config::AuthenticatedConfig;
-use crate::http::{HttpError, get_json, post_empty};
+use crate::http::{HttpError, get_json, post};
 use models::{Bundle, BundlesResponse, SubscriptionsResource, SubscriptionsResponse};
 use reqwest::blocking::Client;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
@@ -14,6 +14,11 @@ pub struct OdidoClient {
     client: Client,
     config: AuthenticatedConfig,
     subscription_url: Option<String>,
+}
+
+enum DiscoverAltCodes {
+    Yes,
+    No,
 }
 
 pub enum IsReplenished {
@@ -107,7 +112,20 @@ impl OdidoClient {
             .floor() as u32
     }
 
-    fn mbs_left(&mut self) -> Result<u32, HttpError> {
+    fn find_alt_buying_codes(&self, bundles: &[Bundle]) {
+        bundles
+            .iter()
+            .filter(|bundle| bundle.zone_color == ZONE_COLOR_NL)
+            .filter_map(|bundle| {
+                bundle
+                    .buying_code
+                    .as_deref()
+                    .filter(|code| *code != self.config.odido_buying_code)
+            })
+            .for_each(|code| println!("Alternatieve BuyingCode gevonden: {code}"));
+    }
+
+    fn mbs_left(&mut self, discover_buying_code: DiscoverAltCodes) -> Result<u32, HttpError> {
         let url = self.resolve_subscription_url()?;
         let response: BundlesResponse = get_json(
             &self.client,
@@ -116,6 +134,11 @@ impl OdidoClient {
             self.config.http_max_retries,
             self.config.http_retry_delay_step,
         )?;
+
+        if self.config.discover_buying_code && matches!(discover_buying_code, DiscoverAltCodes::Yes)
+        {
+            self.find_alt_buying_codes(&response.bundles);
+        }
 
         Ok(Self::calculate_mb_left(&response.bundles))
     }
@@ -128,12 +151,12 @@ impl OdidoClient {
         let body =
             serde_json::json!({ "Bundles": [{ "BuyingCode": &self.config.odido_buying_code }] })
                 .to_string();
-        post_empty(&self.client, &url, headers, body)?;
+        post(&self.client, &url, headers, body)?;
         Ok(())
     }
 
     pub fn replenish_if_needed(&mut self) -> Result<IsReplenished, HttpError> {
-        let mb_left = self.mbs_left()?;
+        let mb_left = self.mbs_left(DiscoverAltCodes::Yes)?;
         if mb_left >= self.config.mb_threshold {
             return Ok(IsReplenished::NotReplenished {
                 mb_left,
@@ -141,7 +164,7 @@ impl OdidoClient {
             });
         }
         self.request_bundle()?;
-        let mb_left_after: u32 = self.mbs_left()?;
+        let mb_left_after: u32 = self.mbs_left(DiscoverAltCodes::No)?;
         Ok(IsReplenished::Replenished {
             mb_left: mb_left_after,
         })
@@ -159,10 +182,12 @@ mod calculate_mb_left {
             Bundle {
                 zone_color: "NL".into(),
                 remaining: Remaining { value: 2048.0 },
+                buying_code: None,
             },
             Bundle {
                 zone_color: "DE".into(),
                 remaining: Remaining { value: 4096.0 },
+                buying_code: None,
             },
         ];
 
@@ -175,10 +200,12 @@ mod calculate_mb_left {
             Bundle {
                 zone_color: "NL".into(),
                 remaining: Remaining { value: 2048.0 },
+                buying_code: None,
             },
             Bundle {
                 zone_color: "NL".into(),
                 remaining: Remaining { value: 4096.0 },
+                buying_code: None,
             },
         ];
 
@@ -190,6 +217,7 @@ mod calculate_mb_left {
         let bundles: &[Bundle] = &[Bundle {
             zone_color: "NL".into(),
             remaining: Remaining { value: 1023.0 },
+            buying_code: None,
         }];
 
         assert_eq!(OdidoClient::calculate_mb_left(bundles), 0);

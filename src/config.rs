@@ -26,6 +26,10 @@ pub struct Cli {
     /// Draai één keer i.p.v. in een loop.
     #[arg(short, long, action = ArgAction::SetTrue)]
     once: bool,
+
+    /// Zet detectie alternatieve BuyingCodes (die niet ODIDO_BUYING_CODE zijn) uit.
+    #[arg(long, action = ArgAction::SetTrue)]
+    no_discover_buying_code: bool,
 }
 
 pub enum StartupMode {
@@ -87,6 +91,7 @@ pub struct AuthenticatedConfig {
     pub http_max_retries: u32,
     pub http_retry_delay_step: u32,
     pub run_mode: RunMode,
+    pub discover_buying_code: bool,
 }
 
 fn parse_env<T: std::str::FromStr>(key: &str) -> Option<T> {
@@ -178,6 +183,9 @@ impl AuthenticatedConfig {
             RunMode::Loop
         };
 
+        let discover_buying_code =
+            !cli.no_discover_buying_code && parse_env_with_default("DISCOVER_BUYING_CODE", true);
+
         Ok(StartupMode::Authenticated(AuthenticatedConfig {
             authorization_token,
             msisdn,
@@ -189,6 +197,7 @@ impl AuthenticatedConfig {
             http_max_retries,
             http_retry_delay_step,
             run_mode,
+            discover_buying_code,
         }))
     }
 }
