@@ -1,4 +1,5 @@
 use crate::config::{AuthorizationCodeConfig, LoginConfig};
+use crate::http::post;
 use anyhow::{Context, Result};
 use base64::{Engine as _, engine::general_purpose};
 use fernet::Fernet;
@@ -66,12 +67,12 @@ pub fn create_authorization_token(config: AuthorizationCodeConfig) -> Result<Str
         HeaderValue::from_static("authorization_code"),
     );
 
-    let response = Client::new()
-        .post(format!("{}/createtoken", config.odido_api_url))
-        .headers(headers)
-        .body(serde_json::json!({ "AuthorizationCode": config.authorization_code }).to_string())
-        .send()?
-        .error_for_status()?;
+    let response = post(
+        &Client::new(),
+        &format!("{}/createtoken", config.odido_api_url),
+        headers,
+        serde_json::json!({ "AuthorizationCode": config.authorization_code }).to_string(),
+    )?;
 
     if let Some(error) = response.headers().get("ErrorText") {
         anyhow::bail!(
