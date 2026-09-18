@@ -103,17 +103,37 @@ fn parse_env_with_default<T: std::str::FromStr>(key: &str, default: T) -> T {
 }
 
 fn determine_interval_config() -> IntervalMode {
+    // Seconds take precedence so sub-minute polling is possible (e.g. fast downloads).
+    if let Some(seconds) = parse_env::<u64>("CHECK_INTERVAL_SECONDS") {
+        return IntervalMode::Static(Duration::from_secs(seconds));
+    }
     if let Some(minutes) = parse_env::<u64>("CHECK_INTERVAL") {
         return IntervalMode::Static(Duration::from_secs(minutes * 60));
     }
 
     let threshold_mb: u32 = parse_env_with_default("DYNAMIC_INTERVAL_MB_THRESHOLD", 4000);
-    let interval_below_threshold_minutes: u64 = parse_env_with_default("DYNAMIC_INTERVAL_LOW", 1);
-    let interval_above_threshold_minutes: u64 = parse_env_with_default("DYNAMIC_INTERVAL_HIGH", 10);
+
+    let interval_below_threshold = if let Some(seconds) =
+        parse_env::<u64>("DYNAMIC_INTERVAL_LOW_SECONDS")
+    {
+        Duration::from_secs(seconds)
+    } else {
+        let minutes: u64 = parse_env_with_default("DYNAMIC_INTERVAL_LOW", 1);
+        Duration::from_secs(minutes * 60)
+    };
+
+    let interval_above_threshold = if let Some(seconds) =
+        parse_env::<u64>("DYNAMIC_INTERVAL_HIGH_SECONDS")
+    {
+        Duration::from_secs(seconds)
+    } else {
+        let minutes: u64 = parse_env_with_default("DYNAMIC_INTERVAL_HIGH", 10);
+        Duration::from_secs(minutes * 60)
+    };
 
     IntervalMode::Dynamic {
-        interval_below_threshold: Duration::from_secs(interval_below_threshold_minutes * 60),
-        interval_above_threshold: Duration::from_secs(interval_above_threshold_minutes * 60),
+        interval_below_threshold,
+        interval_above_threshold,
         threshold: threshold_mb,
     }
 }

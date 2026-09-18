@@ -27,12 +27,24 @@
 
 Kies statisch óf dynamisch. Dynamisch checkt vaker zodra je nog weinig MB's over hebt.
 
+Seconden-variabelen hebben voorrang op de minuten-variabelen (handig bij snelle downloads: venster onder `MB_THRESHOLD` kan korter dan 1 minuut zijn).
+
 | Variabele | Beschrijving | Default |
 |---|---|---|
 | `DYNAMIC_INTERVAL_MB_THRESHOLD` | Dynamisch: onder hoeveel MB er sneller gecheckt wordt. | `4000` |
-| `DYNAMIC_INTERVAL_LOW` | Dynamisch: interval in minuten zodra je onder die grens zit. | `1` |
-| `DYNAMIC_INTERVAL_HIGH` | Dynamisch: interval in minuten zolang je erboven zit. | `10` |
-| `CHECK_INTERVAL` | Statisch: vast interval in minuten. Zet je deze, dan negeert de app de dynamische vars hieronder. | - |
+| `DYNAMIC_INTERVAL_LOW` | Dynamisch: interval in **minuten** zodra je onder die grens zit. | `1` |
+| `DYNAMIC_INTERVAL_HIGH` | Dynamisch: interval in **minuten** zolang je erboven zit. | `10` |
+| `DYNAMIC_INTERVAL_LOW_SECONDS` | Dynamisch: interval in **seconden** onder de grens (overschrijft `DYNAMIC_INTERVAL_LOW`). | - |
+| `DYNAMIC_INTERVAL_HIGH_SECONDS` | Dynamisch: interval in **seconden** boven de grens (overschrijft `DYNAMIC_INTERVAL_HIGH`). | - |
+| `CHECK_INTERVAL` | Statisch: vast interval in **minuten**. | - |
+| `CHECK_INTERVAL_SECONDS` | Statisch: vast interval in **seconden** (overschrijft `CHECK_INTERVAL`). | - |
+
+Voorbeeld snelle polling (alleen als rest onder `MB_THRESHOLD` mag worden aangevraagd):
+
+```text
+MB_THRESHOLD=400
+CHECK_INTERVAL_SECONDS=5
+```
 
 
 ### Praktisch nooit aanpassen
